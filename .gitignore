@@ -1,31 +1,35 @@
-# Gradle build artifacts
-.classpath
-.project
-.settings/
+# Local Android and Gradle state.
 .gradle/
-*.iml
+.kotlin/
 .idea/
-build/
-app/build/
-app/.cxx/
-
-# local settings
+*.iml
+**/build/
+**/.cxx/
+**/.externalNativeBuild/
+out/
+captures/
 local.properties
-signing.properties
-keystore.jks
 
-# LKM build artifacts
-lkm/*.cmd
-lkm/*.o.d
+# Kernel build outputs; shipped modules under app/src/main/jni/ko stay tracked.
 lkm/*.o
+lkm/*.ko
+lkm/*.cmd
 lkm/*.mod
 lkm/*.mod.c
-lkm/*.lto.o
-lkm/*.lds
 lkm/modules.order
 lkm/Module.symvers
+lkm/dfroot.lds
+lkm/.tmp_versions/
 
-# Generated binaries
-out/
-app/src/main/jni/splicehelper
-app/src/main/jni/ko/*.ko
+# Keep signing material and credentials on this machine.
+signing.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+keystore.b64
+
+# Prebuilt KO files and splicehelper are application inputs, not build caches.

@@ -1,4 +1,4 @@
-package df.root;
+package df.root.shizuku.cn;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -11,6 +11,7 @@ public class SettingsActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         getActionBar().setDisplayHomeAsUpEnabled(true);
+        getActionBar().setTitle(R.string.settings_title);
 
         getFragmentManager().beginTransaction()
                 .replace(R.id.settingsContainer, new SettingsFragment())

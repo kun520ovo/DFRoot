@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 应用名 -->
+    <string name="app_name">DFRoot Shizuku版</string>
+
+    <!-- 主界面 -->
+    <string name="main_repository_attribution" translatable="false">\@kun520ovo GitHub/DFRoot</string>
+    <string name="main_repository_url" translatable="false">https://github.com/kun520ovo/DFRoot</string>
+    <string name="main_repository_description">在浏览器中打开 @kun520ovo 的 DFRoot GitHub 仓库</string>
+    <string name="main_repository_open_failed">无法打开浏览器，请安装或启用浏览器后重试。</string>
+    <string name="main_launch_root">启动 Root</string>
+    <string name="main_select_manager">选择 SU 管理器</string>
+
+    <!-- 主界面日志（ExploitRunner 输出） -->
+    <string name="log_device_info">设备信息：</string>
+    <string name="log_app_version">* 应用版本：%1$s\n</string>
+    <string name="log_already_hooked">已检测到提权 Hook，跳过重复运行。\n</string>
+    <string name="log_manufacturer">* 厂商：</string>
+    <string name="log_model">* 型号：</string>
+    <string name="log_android_version">* 安卓版本：</string>
+    <string name="log_security_patch">* 安全补丁：</string>
+    <string name="log_kernel_version">* 内核版本：</string>
+    <string name="log_no_manager_selected">未选择 SU 管理器\n</string>
+    <string name="log_manager_removed">%s 已被卸载\n</string>
+    <string name="log_no_libksud">在 %s 中未找到 libksud.so\n</string>
+
+    <!-- 结果提示（Toast） -->
+    <string name="result_success">DFRoot Shizuku版：成功</string>
+    <string name="result_failed_ksud">DFRoot Shizuku版：错误 - ksud 退出码非零</string>
+    <string name="result_failed_logs">DFRoot Shizuku版：错误 - 请检查 logcat 与 dmesg</string>
+    <string name="result_failed_patch">DFRoot Shizuku版：错误 - 文件修补失败</string>
+    <string name="log_exception">\n异常：</string>
+
+    <!-- 主界面：顶部常驻信息面板 -->
+    <string name="panel_kernel_label">当前内核</string>
+    <string name="panel_kmi_label">匹配 KMI</string>
+    <string name="panel_supported_label">支持的内核</string>
+    <string name="panel_unsupported">不支持</string>
+    <string name="panel_kernel_current">%1$s ✓</string>
+    <string name="panel_kernel_current_description">%1$s，当前匹配的内核</string>
+
+    <!-- 内核不支持时的警告与按钮文案 -->
+    <string name="warn_unsupported">此设备内核不受支持，无法运行。\n请确认内核主次版本（如 6.12）在上方列表中。</string>
+    <string name="main_launch_root_blocked">内核不受支持</string>
+
+    <!-- 主界面：支持的内核版本信息 -->
+    <string name="info_title">── 支持的内核版本 ──</string>
+    <string name="info_kernel">当前内核：</string>
+    <string name="info_matched">匹配 KMI：</string>
+    <string name="info_unsupported">不支持</string>
+    <string name="info_supported_list">已内置驱动（KO）：</string>
+    <string name="info_tip_unsupported">\n提示：当前内核未在支持列表中，\n使用前请确认内核版本（KMI）是否匹配。\n</string>
+
+    <!-- 设置界面 -->
+    <string name="settings_title">设置</string>
+    <string name="menu_settings">设置</string>
+    <string name="pref_boot_start_title">开机自启</string>
+    <string name="pref_boot_start_summary">设备启动时自动运行 DFRoot Shizuku版</string>
+    <string name="pref_soft_reboot_title">自动软重启</string>
+    <string name="pref_soft_reboot_summary">对「手动启动」和「开机自启」均生效。</string>
+    <string name="pref_disable_modules_title">禁用所有模块</string>
+    <string name="pref_disable_modules_summary">模块崩溃导致设备异常时开启。下次运行将以全部模块禁用的状态启动。</string>
+
+    <!-- 应用列表权限与管理器加载 -->
+    <string name="manager_permission_needed">需要允许读取设备应用列表，才能查找已安装的 SU 管理器。</string>
+    <string name="manager_permission_waiting">请在系统授权窗口中选择是否允许读取应用列表。</string>
+    <string name="manager_permission_requesting">正在请求授权…</string>
+    <string name="manager_permission_retry_hint">尚未获得读取应用列表权限，点击下方按钮可重新请求授权。</string>
+    <string name="manager_permission_required_button">请先允许读取应用列表</string>
+    <string name="manager_permission_settings">打开权限设置</string>
+    <string name="manager_permission_settings_hint">请点击下方按钮打开权限设置，允许读取应用列表后返回。</string>
+    <string name="manager_settings_unavailable">无法打开权限设置，请前往系统设置 → 应用 → DFRoot Shizuku版 → 权限进行设置。</string>
+    <string name="manager_loading">正在查找 SU 管理器…</string>
+    <string name="manager_choose">请选择一个 SU 管理器。</string>
+    <string name="manager_not_found">未找到可用的 SU 管理器。请确认已安装 SukiSU 等兼容管理器，并允许读取应用列表。</string>
+    <string name="manager_scan_failed">读取应用列表失败，请检查权限后重新读取。</string>
+    <string name="manager_retry">重新读取应用列表</string>
+    <string name="main_running">正在提权…</string>
+    <string name="log_view_title">运行日志</string>
+    <string name="log_view_fullscreen">全屏</string>
+    <string name="log_view_close">关闭</string>
+    <string name="section_su_manager">SU 管理器</string>
+    <string name="main_manager_caption">提权成功后由所选 SU 管理器管理 Root 权限</string>
+    <string name="log_session_note">日志仅在当前会话显示，不保存为日志文件</string>
+    <string name="kernel_unknown">未知</string>
+
+    <!-- Shizuku connection and temporary setting recovery -->
+    <string name="shizuku_check">检查 Shizuku</string>
+    <string name="shizuku_checking">正在连接并检查 Shizuku…</string>
+    <string name="shizuku_missing">尚未安装 Shizuku，点击前往下载</string>
+    <string name="shizuku_stopped">Shizuku 未运行，点击打开</string>
+    <string name="shizuku_permission">尚未授权，点击允许 DFRoot Shizuku版使用 Shizuku</string>
+    <string name="shizuku_permission_title">允许 DFRoot Shizuku版使用 Shizuku？</string>
+    <string name="shizuku_permission_rationale">仅在你手动启动 Root 时，DFRoot Shizuku版会临时读取并调整 log.tag.init；提权结束后恢复并校验原值。恢复失败时会保留记录并阻止再次启动。</string>
+    <string name="shizuku_permission_allow">继续并请求授权</string>
+    <string name="shizuku_open_manager">打开 Shizuku</string>
+    <string name="shizuku_requesting">请在 Shizuku 授权窗口中选择允许</string>
+    <string name="shizuku_old_version">需要 Shizuku 13 或更新版本，点击更新</string>
+    <string name="shizuku_ready">服务已运行并授权，可启动 Root</string>
+    <string name="shizuku_running">正在使用临时设置，结束后自动恢复</string>
+    <string name="shizuku_restore_pending">上次设置尚未恢复，点击重新连接并重试</string>
+    <string name="shizuku_check_failed">检查失败，请重试或重新启动 Shizuku</string>
+    <string name="shizuku_ready_reboot">服务已就绪，恢复设置后自动软重启</string>
+    <string name="shizuku_busy">已有提权或恢复任务正在进行，请稍后重试。</string>
+    <string name="shizuku_bad_record">恢复记录不完整，已停止本次运行。</string>
+    <string name="shizuku_record_failed">无法保存恢复记录，未修改系统设置。</string>
+    <string name="shizuku_settings_flush_failed">无法确认设置已保存，未开始提权。</string>
+    <string name="shizuku_clear_record_failed">设置已恢复，但恢复记录未能清理，请重新检查。</string>
+    <string name="shizuku_value_changed">设置已被其他操作改变，未自动覆盖；请恢复原值或重启后再检查。</string>
+    <string name="shizuku_operation_failed">无法通过 Shizuku 完成设置操作或校验，请检查服务状态和调试权限。</string>
+    <string name="shizuku_error_detail">%1$s（%2$s）</string>
+    <string name="shizuku_environment_ready">Shizuku：服务已授权，临时运行环境已确认。</string>
+    <string name="shizuku_root_result">提权执行返回码：%1$d</string>
+    <string name="shizuku_restored">Shizuku：运行前的设置已恢复并校验。</string>
+    <string name="shizuku_restored_by_timeout">Shizuku：超时保护已提前恢复临时设置。</string>
+    <string name="shizuku_restore_failed">Shizuku：恢复未完成。%1$s</string>
+    <string name="shizuku_record_clear_pending">Shizuku：设置已恢复，但恢复记录清理未完成，请重新检查。</string>
+    <string name="shizuku_open_failed">无法打开 Shizuku，请手动打开或前往其官方下载页面。</string>
+    <string name="main_shizuku_required">请先检查 Shizuku</string>
+    <string name="result_settings_restore_pending">临时设置恢复未完成，请重新检查 Shizuku；提权结果请查看日志</string>
+    <string name="result_recovery_record_pending">临时设置已恢复，但恢复记录清理未完成；请重新检查 Shizuku</string>
+    <string name="pref_soft_reboot_shizuku_summary">默认关闭。开启后，手动提权成功并恢复临时设置后自动软重启；运行期间不可更改。</string>
+    <string name="soft_reboot_cancelled">自动软重启已取消：本次提权或设置恢复尚未完整完成。</string>
+    <string name="soft_reboot_waiting">临时设置及恢复记录已处理完成，正在等待管理器初始化并请求软重启…</string>
+    <string name="shizuku_rebooting">临时设置已恢复，等待软重启确认</string>
+    <string name="main_waiting_soft_reboot">正在等待软重启…</string>
+    <string name="soft_reboot_requested">已向管理器发出软重启请求。</string>
+    <string name="soft_reboot_unconfirmed">未能确认自动软重启，请在管理器中检查；Root 结果不受影响。</string>
+    <string name="result_soft_reboot_failed">Root 已完成，但未确认自动软重启，请查看日志。</string>
+    <string name="result_soft_reboot_requested">Root 已完成，已请求自动软重启。</string>
+</resources>

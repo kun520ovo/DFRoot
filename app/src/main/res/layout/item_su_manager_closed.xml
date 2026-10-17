@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/labelApp"
+    style="?android:attr/spinnerItemStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp">
-
-    <ImageView
-        android:id="@+id/iconApp"
-        android:layout_width="72dp"
-        android:layout_height="72dp"
-        android:layout_gravity="center"
-        android:contentDescription="App icon" />
-
-    <TextView
-        android:id="@+id/labelApp"
-        style="?android:attr/spinnerItemStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center" />
-
-</FrameLayout>
+    android:minHeight="48dp"
+    android:gravity="center_vertical"
+    android:paddingStart="0dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="0dp"
+    android:paddingBottom="4dp"
+    android:drawablePadding="12dp"
+    android:includeFontPadding="false"
+    android:textColor="?android:attr/textColorPrimary"
+    android:textSize="16sp" />

@@ -1,9 +1,9 @@
 <resources>
     <style name="Theme.DirtyFrag" parent="android:Theme.Material">
-        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
         <item name="android:colorBackground">@android:color/black</item>
-        <item name="android:colorPrimary">#4A7A57</item>
-        <item name="android:colorAccent">#4A7A57</item>
+        <item name="android:colorPrimary">@color/dfroot_primary</item>
+        <item name="android:colorAccent">@color/dfroot_primary</item>
         <item name="android:colorButtonNormal">@color/btn_background_color</item>
         <item name="android:buttonCornerRadius">24dp</item>
         <item name="android:buttonStyle">@style/Widget.DirtyFrag.Button</item>

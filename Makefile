@@ -21,44 +21,34 @@ DDK_WF      := .github/workflows/build.yml
 DDK_IMAGE   ?= $(shell awk '/image: ghcr\.io\//{gsub(/.*image: /,"");gsub(/:.*$$/,"");print;exit}' $(DDK_WF))
 DDK_RELEASE ?= $(shell awk '/image: ghcr\.io\/ylarod\/ddk-min:/{sub(/.*-/,"");print;exit}' $(DDK_WF))
 
-SIGN_PASS  := df-ksu
-SIGN_ALIAS := df-ksu
 
 LKM_SRCS    := lkm/dfroot.c lkm/Makefile
 LKM_KOS     := $(KMIS:%=app/src/main/jni/ko/dfroot-%.ko)
-APK_SRCS    := $(wildcard app/src/main/java/df/root/*.java \
-                               app/src/main/jni/*.c app/src/main/jni/*.h \
-                               app/src/main/jni/*.S app/src/main/jni/*.inc \
-                               app/src/main/res/layout/*.xml \
-                               app/src/main/res/values/*.xml) \
-                   app/src/main/AndroidManifest.xml \
-                   app/build.gradle.kts \
-                   app/src/main/jni/CMakeLists.txt
-APK   := out/DFRoot.apk
+APK_SRCS    := $(shell find app/src/main -type f ! -path '*/ko/*' ! -name splicehelper) \
+               $(wildcard *.gradle.kts gradle/*.toml gradle/*.properties gradle/wrapper/*) \
+               gradle.properties app/build.gradle.kts app/proguard-rules.pro
+APK_VERSION := $(shell sed -n 's/.*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | sed 's/-cn$$//')
+APK_NAME    := DFRoot Shizuku-$(APK_VERSION)_CN.apk
+# Make needs an escaped space in targets; shell paths are quoted in recipes.
+empty :=
+space := $(empty) $(empty)
+APK   := out/$(subst $(space),\ ,$(APK_NAME))
 
 
-.PHONY: all clean
+.PHONY: all clean clean-native
 
 all: $(APK)
 
-keystore.jks:
-	keytool -genkeypair -keystore $@ -storetype JKS \
-	    -storepass $(SIGN_PASS) -keypass $(SIGN_PASS) \
-	    -alias $(SIGN_ALIAS) -keyalg RSA -keysize 2048 -validity 10000 \
-	    -dname "CN=DFRoot"
-
-signing.properties: keystore.jks
-	printf 'KEYSTORE_FILE=../keystore.jks\nKEYSTORE_PASSWORD=%s\nKEY_ALIAS=%s\nKEY_PASSWORD=%s\n' \
-	    $(SIGN_PASS) $(SIGN_ALIAS) $(SIGN_PASS) > $@
-
-$(LKM_KOS): $(LKM_SRCS)
+# A grouped target prevents parallel make invocations from rebuilding the same
+# eight modules concurrently. Requires GNU Make 4.3 or newer.
+$(LKM_KOS) &: $(LKM_SRCS) $(DDK_WF)
 	@printf '\n\033[1;35m══  Building LKMs  ══\033[0m\n'; \
 	for kmi in $(KMIS); do \
 	    printf '\n\033[1;33m▶  PODMAN  %s\033[0m\n' "$$kmi"; \
 	    $(ENGINE) run --rm --pid=host --network=none \
-	        -v $(abspath .):/proj \
-	        -e KMI=$$kmi \
-	        $(DDK_IMAGE):$$kmi-$(DDK_RELEASE) \
+	        -v "$(abspath .):/proj" \
+	        -e KMI="$$kmi" \
+	        "$(DDK_IMAGE):$$kmi-$(DDK_RELEASE)" \
 	        bash -c 'set -e; \
 	            cd /proj/lkm; \
 	            make -j$$(nproc); \
@@ -73,20 +63,23 @@ $(LKM_KOS): $(LKM_SRCS)
 	            make clean; \
 	            printf "\033[1;32m  ✔  DF LKM   $$KMI\033[0m\n"; \
 	        ' || exit 1; \
-	done; \
+	done
 
-$(APK): signing.properties $(LKM_KOS) $(APK_SRCS)
+$(APK): $(wildcard signing.properties) $(LKM_KOS) $(APK_SRCS)
 	@printf '\n\033[1;36m══  DFRoot APK  ══\033[0m\n'
 	@printf '\033[1;35m  → gradle assembleRelease\033[0m\n'
-	./gradlew :app:assembleRelease
-	mkdir -p $(dir $@)
-	cp app/build/outputs/apk/release/DFRoot_*.apk $@
+	bash ./gradlew :app:assembleRelease
+	mkdir -p out
+	cp "app/build/outputs/apk/release/$(APK_NAME)" "$@"
 	@printf '\033[1;32m  ✔  DFRoot APK  →  $@\033[0m\n'
 
 clean:
+	rm -rf build out app/.cxx app/build .gradle .kotlin
+
+# Explicitly discards prebuilt native inputs and requires their regeneration.
+clean-native: clean
 	rm -f app/src/main/jni/splicehelper
 	rm -f lkm/*.o lkm/*.cmd lkm/.*.cmd lkm/*.mod lkm/*.mod.c lkm/*.lto.o lkm/modules.order lkm/Module.symvers lkm/dfroot.lds lkm/dfroot.ko
 	rm -rf app/src/main/jni/ko
 	rm -f .project app/.project app/.classpath
 	rm -rf .settings app/.settings
-	rm -rf build out app/.cxx app/build .gradle

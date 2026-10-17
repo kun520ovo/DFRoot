@@ -1,15 +1,7 @@
 [versions]
-agp = "9.4.0"
-appcompat = "1.7.1"
-material = "1.13.0"
-constraintlayout = "2.2.1"
-preference = "1.2.1"
+shizuku = "13.1.5"
 
 [libraries]
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-androidx-preference = { group = "androidx.preference", name = "preference", version.ref = "preference" }
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 
-[plugins]
-android-application = { id = "com.android.application", version.ref = "agp" }

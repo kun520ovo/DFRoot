@@ -8,6 +8,9 @@ on:
     branches: [master, main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-lkms:
     name: LKMs / ${{ matrix.kmi }}
@@ -28,19 +31,23 @@ jobs:
       options: --privileged
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Build dfroot.ko
+        env:
+          KMI: ${{ matrix.kmi }}
         run: |
           cd lkm
           make -j$(nproc)
           llvm-objcopy --strip-unneeded \
-            -R .comment -R .note.gnu.build-id -R .note.gnu.property \
+            -R .comment -R .note.gnu.property \
             -R .note.Linux -R .note.GNU-stack \
             -R .BTF -R .BTF.base -R .llvm_addrsig \
             -R .hyp.text -R .hyp.bss -R .hyp.rodata -R .hyp.event_ids \
             -R .hyp.patchable_function_entries -R .hyp.data dfroot.ko
-          mkdir -p $GITHUB_WORKSPACE/out
-          cp dfroot.ko $GITHUB_WORKSPACE/out/dfroot-${{ matrix.kmi }}.ko
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp dfroot.ko "$GITHUB_WORKSPACE/out/dfroot-${KMI}.ko"
           make clean
 
       - name: Upload dfroot.ko
@@ -52,25 +59,42 @@ jobs:
   build-dfroot:
     needs: build-lkms
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
-
-      - name: Validate signing config
-        if: github.event_name != 'pull_request'
-        run: |
-          if [ "${{ secrets.KEYSTORE }}" = "" ]; then
-            echo "::error::Signing secrets not configured. KEYSTORE secret is required for release builds."
-            exit 1
-          fi
+        with:
+          persist-credentials: false
 
       - name: Create signing.properties
         if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo KEYSTORE_FILE=../keystore.jks > signing.properties
-          echo KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} >> signing.properties
-          echo KEY_ALIAS=${{ secrets.KEY_ALIAS }} >> signing.properties
-          echo KEY_PASSWORD=${{ secrets.KEY_PASSWORD }} >> signing.properties
-          echo ${{ secrets.KEYSTORE }} | base64 --decode > keystore.jks
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          required = ("KEYSTORE", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD")
+          for name in required:
+              if not os.environ.get(name):
+                  raise SystemExit(f"::error::Missing signing Secret: {name}")
+          os.umask(0o077)
+          keystore = base64.b64decode("".join(os.environ["KEYSTORE"].split()), validate=True)
+          if not keystore:
+              raise SystemExit("::error::Empty signing keystore")
+          Path("keystore.jks").write_bytes(keystore)
+          properties = ["KEYSTORE_FILE=../keystore.jks"]
+          # Java Properties uses Unicode escapes and treats backslashes as escapes.
+          for name in required[1:]:
+              value = os.environ[name].encode("utf-16-be")
+              escaped = "".join("\\u" + value[i:i + 2].hex() for i in range(0, len(value), 2))
+              properties.append(name + "=" + escaped)
+          Path("signing.properties").write_text("\n".join(properties) + "\n", encoding="ascii")
+          PY
 
       - name: Download DF LKMs
         uses: actions/download-artifact@v7
@@ -82,28 +106,68 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 27
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;30.0.16248370 cmake;4.1.2
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
-      - name: Build DFRoot APK
+      - name: Build Debug APK
+        if: github.event_name == 'pull_request'
+        run: bash ./gradlew :app:assembleDebug :app:lintDebug --console=plain
+
+      - name: Build signed Release APK
+        if: github.event_name != 'pull_request'
+        run: bash ./gradlew :app:assembleRelease :app:lintRelease --console=plain
+
+      - name: Check Release APK
+        if: github.event_name != 'pull_request'
+        shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./gradlew :app:assembleDebug
-          else
-            ./gradlew :app:assembleRelease
-          fi
+          tools="$ANDROID_HOME/build-tools/37.0.0"
+          for apk in app/build/outputs/apk/release/"DFRoot Shizuku-"*_CN.apk; do
+            "$tools/aapt2" dump badging "$apk"
+            # This verifies legacy signature layers; the APK minSdk remains 32.
+            "$tools/apksigner" verify --verbose --min-sdk-version 23 "$apk" | tee "$RUNNER_TEMP/signatures.txt"
+            for scheme in v1 v2 v3; do
+              grep -q "Verified using $scheme scheme .*: true" "$RUNNER_TEMP/signatures.txt"
+            done
+            "$tools/zipalign" -c -P 16 4 "$apk"
+            python3 - "$apk" <<'PY'
+          import struct, sys, zipfile
+          from pathlib import Path
+          with zipfile.ZipFile(sys.argv[1]) as apk:
+              files = [(name, apk.read(name)) for name in ("lib/arm64-v8a/libdfroot.so", "lib/arm64-v8a/libbootstrap.so")]
+          files.append(("splicehelper", Path("app/src/main/jni/splicehelper").read_bytes()))
+          for name, data in files:
+              header = struct.unpack_from("<16sHHIQQQIHHHHHH", data)
+              assert header[0][:6] == b"\x7fELF\x02\x01" and header[2] == 183, name
+              segments = [struct.unpack_from("<IIQQQQQQ", data, header[5] + i * header[9]) for i in range(header[10])]
+              loads = [p for p in segments if p[0] == 1]
+              assert loads and all(p[7] >= 16384 and p[7] % 16384 == 0 and (p[3] - p[2]) % 16384 == 0 for p in loads), name
+          print("16 KB ELF alignment verified")
+          PY
+          done
 
       - name: Upload DFRoot APK
         uses: actions/upload-artifact@v7
         with:
           name: DFRoot
           path: |
-            app/build/outputs/apk/release/DFRoot_*.apk
-            app/build/outputs/apk/debug/DFRoot_*.apk
+            app/build/outputs/apk/release/DFRoot Shizuku-*_CN.apk
+            app/build/outputs/apk/debug/DFRoot Shizuku-*_CN.apk
+          if-no-files-found: error
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: app/build/outputs/apk/release/DFRoot_*.apk
+          files: app/build/outputs/apk/release/DFRoot Shizuku-*_CN.apk
+
+      - name: Remove temporary signing files
+        if: always() && github.event_name != 'pull_request'
+        run: rm -f -- keystore.jks signing.properties

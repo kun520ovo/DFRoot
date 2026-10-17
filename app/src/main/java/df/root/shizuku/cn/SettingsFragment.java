@@ -1,4 +1,4 @@
-package df.root;
+package df.root.shizuku.cn;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,6 +9,13 @@ import android.preference.PreferenceFragment;
 import android.preference.SwitchPreference;
 
 public class SettingsFragment extends PreferenceFragment {
+    private SwitchPreference softRebootPref;
+    private ShizukuCompat shizuku;
+    private final Runnable updateRebootState = () -> {
+        if (softRebootPref != null && shizuku != null) {
+            softRebootPref.setEnabled(!shizuku.isRunning());
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -16,6 +23,7 @@ public class SettingsFragment extends PreferenceFragment {
         addPreferencesFromResource(R.xml.preferences);
 
         Context ctx = getActivity();
+        shizuku = ShizukuCompat.get(ctx);
         SharedPreferences dePrefs = ctx.createDeviceProtectedStorageContext()
                 .getSharedPreferences(ExploitRunner.PREFS_NAME, Context.MODE_PRIVATE);
 
@@ -32,12 +40,12 @@ public class SettingsFragment extends PreferenceFragment {
             return true;
         });
 
-        SwitchPreference softRebootPref = (SwitchPreference) findPreference("soft_reboot");
+        softRebootPref = (SwitchPreference) findPreference("soft_reboot");
         softRebootPref.setPersistent(false);
+        softRebootPref.setSummary(R.string.pref_soft_reboot_shizuku_summary);
         softRebootPref.setChecked(dePrefs.getBoolean("soft_reboot", false));
         softRebootPref.setOnPreferenceChangeListener((pref, value) -> {
-            dePrefs.edit().putBoolean("soft_reboot", (Boolean) value).apply();
-            return true;
+            return shizuku.setSoftRebootEnabled((Boolean) value);
         });
 
         SwitchPreference disableModulesPref = (SwitchPreference) findPreference("disable_modules");
@@ -47,5 +55,18 @@ public class SettingsFragment extends PreferenceFragment {
             dePrefs.edit().putBoolean("disable_modules", (Boolean) value).apply();
             return true;
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        shizuku.addListener(updateRebootState);
+        updateRebootState.run();
+    }
+
+    @Override
+    public void onPause() {
+        shizuku.removeListener(updateRebootState);
+        super.onPause();
     }
 }

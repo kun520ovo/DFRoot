@@ -1,18 +1,59 @@
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #define BLKROSET   0x125d
-#define KSUD_STAGE "/data/user_de/0/df.root/ksud"
+#define KSUD_STAGE "/data/user_de/0/df.root.shizuku.cn/ksud"
 #define KSUD       "/data/adb/ksud"
-#define PREFS_PATH "/data/user_de/0/df.root/shared_prefs/dfroot.xml"
+#define PREFS_PATH "/data/user_de/0/df.root.shizuku.cn/shared_prefs/dfroot.xml"
+#define REBOOT_GATE_PATH "/data/user_de/0/df.root.shizuku.cn/soft_reboot_gate"
 #define MODULES_DIR "/data/adb/modules"
+
+/* Keep this eight-byte protocol in sync with SoftRebootGate.java. */
+#define GATE_SIZE 8
+#define GATE_AUTH 4
+#define GATE_RESULT 5
+#define GATE_WAIT 0
+#define GATE_ALLOW 1
+#define GATE_READY 1
+#define GATE_REQUESTED 2
+#define GATE_FAILED 3
+#define GATE_TIMED_OUT 4
+
+static volatile unsigned char *open_reboot_gate(void)
+{
+    int fd = open(REBOOT_GATE_PATH, O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) return NULL;
+    struct stat st;
+    if (fstat(fd, &st) || !S_ISREG(st.st_mode) || st.st_size != GATE_SIZE) {
+        close(fd);
+        return NULL;
+    }
+    void *mapping = mmap(NULL, GATE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (mapping == MAP_FAILED) {
+        unsigned char failed = GATE_FAILED;
+        (void)pwrite(fd, &failed, 1, GATE_RESULT);
+        close(fd);
+        return NULL;
+    }
+    close(fd);
+    volatile unsigned char *gate = mapping;
+    if (memcmp(mapping, "DFR1", 4) || gate[GATE_AUTH] != GATE_WAIT) {
+        gate[GATE_RESULT] = GATE_FAILED;
+        munmap(mapping, GATE_SIZE);
+        return NULL;
+    }
+    gate[GATE_RESULT] = GATE_READY;
+    return gate;
+}
 
 static int pref_true(const char *buf, const char *key)
 {
@@ -26,7 +67,7 @@ static int pref_true(const char *buf, const char *key)
 }
 
 static int read_prefs(char *su_manager, size_t su_manager_size, int *soft_reboot,
-                      int *disable_modules)
+                      int *disable_modules, int *defer_reboot)
 {
     int fd = open(PREFS_PATH, O_RDONLY);
     if (fd < 0) return -1;
@@ -49,6 +90,7 @@ static int read_prefs(char *su_manager, size_t su_manager_size, int *soft_reboot
 
     *soft_reboot = pref_true(buf, "soft_reboot");
     *disable_modules = pref_true(buf, "disable_modules");
+    *defer_reboot = pref_true(buf, "defer_soft_reboot");
 
     return 0;
 }
@@ -122,7 +164,7 @@ static int late_load_running(void)
 {
     DIR *d = opendir("/proc");
     if (!d)
-        return 0;
+        return -1;
     struct dirent *e;
     char path[64], buf[256];
     int found = 0;
@@ -162,8 +204,34 @@ static int run_ctx(const char *ctx, char *const argv[])
         _exit(127);
     }
     int status;
-    waitpid(pid, &status, 0);
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) return -1;
+    }
     return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+static void request_soft_reboot(volatile unsigned char *gate, int deferred)
+{
+    /* A missing or invalid manual acknowledgement must never become an auto run. */
+    if (deferred && !gate) return;
+    for (int elapsed = 0; elapsed < 120; elapsed++) {
+        if (deferred && gate[GATE_AUTH] != GATE_WAIT && gate[GATE_AUTH] != GATE_ALLOW) {
+            gate[GATE_RESULT] = GATE_FAILED;
+            return;
+        }
+        int loading = late_load_running();
+        if (loading < 0) {
+            if (gate) gate[GATE_RESULT] = GATE_FAILED;
+            return;
+        }
+        if (!loading && (!deferred || gate[GATE_AUTH] == GATE_ALLOW)) {
+            int rc = run_ctx("u:r:ksu:s0", (char *[]){ KSUD, "soft-reboot", NULL });
+            if (gate) gate[GATE_RESULT] = rc == 0 ? GATE_REQUESTED : GATE_FAILED;
+            return;
+        }
+        sleep(1);
+    }
+    if (gate) gate[GATE_RESULT] = GATE_TIMED_OUT;
 }
 
 static void touch(const char *path)
@@ -197,11 +265,14 @@ int main(void)
 {
     touch("/dev/dfm1");
     char su_manager[256];
-    int soft_reboot, disable_mods;
-    if (read_prefs(su_manager, sizeof(su_manager), &soft_reboot, &disable_mods) != 0) {
+    int soft_reboot, disable_mods, defer_reboot;
+    if (read_prefs(su_manager, sizeof(su_manager), &soft_reboot, &disable_mods, &defer_reboot) != 0) {
         touch("/dev/dfme0");
         return 1;
     }
+    // Map before KernelSU starts enforcing SELinux. Later acknowledgements need
+    // no filesystem reopen or permission change in the init/ksu context.
+    volatile unsigned char *reboot_gate = soft_reboot && defer_reboot ? open_reboot_gate() : NULL;
 
     touch("/dev/dfm2");
     if (adopt_zygote_env())
@@ -219,16 +290,17 @@ int main(void)
         }
     }
 
-    touch("/dev/dfm5");    
+    touch("/dev/dfm5");
+    // The kernel's UMH command sets the init context before bootstrap executes.
     if (run_ctx(NULL, (char *[]){ KSUD_STAGE, "late-load", "--package-name", su_manager, NULL }) == 0) {
         touch("/dev/dfm6");
         if (soft_reboot) {
-            while (late_load_running()) sleep(1);
-            run_ctx("u:r:ksu:s0", (char *[]){ KSUD, "soft-reboot", NULL });
+            request_soft_reboot(reboot_gate, defer_reboot);
         }
     } else {
         touch("/dev/dfme2");
     }
-        
+    if (reboot_gate) munmap((void *)reboot_gate, GATE_SIZE);
+
     return 0;
 }

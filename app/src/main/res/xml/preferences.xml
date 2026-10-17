@@ -3,19 +3,19 @@
 
     <SwitchPreference
         android:key="boot_start"
-        android:title="Start at Boot"
-        android:summary="Automatically run DFRoot on device boot" />
+        android:title="@string/pref_boot_start_title"
+        android:summary="@string/pref_boot_start_summary" />
 
     <SwitchPreference
         android:key="soft_reboot"
-        android:title="Auto Soft Reboot"
-        android:summary="Applies to both Manual Start and Start at Boot."
+        android:title="@string/pref_soft_reboot_title"
+        android:summary="@string/pref_soft_reboot_summary"
         android:defaultValue="false" />
 
     <SwitchPreference
         android:key="disable_modules"
-        android:title="Disable KSU Modules"
-        android:summary="Turn this on if a broken module is crashing your device. The next run will launch with all modules disabled."
+        android:title="@string/pref_disable_modules_title"
+        android:summary="@string/pref_disable_modules_summary"
         android:defaultValue="false" />
 
 </PreferenceScreen>

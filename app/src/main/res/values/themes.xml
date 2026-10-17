@@ -1,8 +1,9 @@
 <resources>
     <style name="Theme.DirtyFrag" parent="android:Theme.Material.Light">
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:colorPrimary">#8FC79A</item>
-        <item name="android:colorAccent">#8FC79A</item>
+        <item name="android:colorPrimary">@color/dfroot_primary</item>
+        <item name="android:colorAccent">@color/dfroot_primary</item>
         <item name="android:colorControlNormal">@android:color/black</item>
         <item name="android:textColorPrimary">@android:color/black</item>
         <item name="android:colorButtonNormal">@color/btn_background_color</item>
@@ -12,5 +13,28 @@
 
     <style name="Widget.DirtyFrag.Button" parent="android:Widget.Material.Button">
         <item name="android:textColor">@color/btn_text_color</item>
+    </style>
+
+    <style name="Theme.DirtyFrag.Log" parent="Theme.DirtyFrag">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:statusBarColor">?android:attr/colorBackground</item>
+        <item name="android:navigationBarColor">?android:attr/colorBackground</item>
+        <item name="android:windowLightNavigationBar">?android:attr/windowLightStatusBar</item>
+    </style>
+
+    <style name="Widget.DirtyFrag.SectionTitle" parent="android:Widget.TextView">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Widget.DirtyFrag.TextButton" parent="android:Widget.Material.Button.Borderless">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/text_action_color</item>
     </style>
 </resources>

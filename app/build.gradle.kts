@@ -6,22 +6,22 @@ plugins {
 
 val signingProps = Properties()
 val signingPropsFile = rootProject.file("signing.properties")
-if (signingPropsFile.exists()) signingProps.load(signingPropsFile.inputStream())
+if (signingPropsFile.exists()) {
+    signingPropsFile.inputStream().use { signingProps.load(it) }
+}
 
 android {
-    namespace = "df.root"
+    namespace = "df.root.shizuku.cn"
     compileSdk = 37
-
-    buildFeatures {
-        buildConfig = true
-    }
+    buildToolsVersion = "37.0.0"
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
-        applicationId = "df.root"
+        applicationId = "df.root.shizuku.cn"
         minSdk = 32
         targetSdk = 37
-        versionCode = 405
-        versionName = "4.5"
+        versionCode = 501
+        versionName = "5.1-cn"
 
         ndk {
             abiFilters += listOf("arm64-v8a")
@@ -29,11 +29,17 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(signingProps.getProperty("KEYSTORE_FILE"))
-            storePassword = signingProps.getProperty("KEYSTORE_PASSWORD")
-            keyAlias = signingProps.getProperty("KEY_ALIAS")
-            keyPassword = signingProps.getProperty("KEY_PASSWORD")
+        if (signingPropsFile.exists()) {
+            create("release") {
+                storeFile = file(signingProps.getProperty("KEYSTORE_FILE"))
+                storePassword = signingProps.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = signingProps.getProperty("KEY_ALIAS")
+                keyPassword = signingProps.getProperty("KEY_PASSWORD")
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = false
+            }
         }
     }
 
@@ -43,10 +49,13 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -55,12 +64,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    buildFeatures {
+        aidl = true
+        buildConfig = true
+    }
+
     lint {
-        checkReleaseBuilds = false
+        checkReleaseBuilds = true
     }
 
     externalNativeBuild {
         cmake {
+            version = "4.1.2"
             path("src/main/jni/CMakeLists.txt")
         }
     }
@@ -75,10 +90,14 @@ android {
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName.set(output.versionName.map { vn -> "DFRoot_${vn}.apk" })
+            output.outputFileName.set(output.versionName.map { vn ->
+                "DFRoot Shizuku-${vn.removeSuffix("-cn")}_CN.apk"
+            })
         }
     }
 }
 
 dependencies {
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="dfroot_primary">#8FC79A</color>
+    <color name="dfroot_success">#1B7F3B</color>
+    <color name="dfroot_error">#B3261E</color>
+    <color name="dfroot_warning_background">#1FB3261E</color>
+</resources>
