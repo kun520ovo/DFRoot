@@ -250,7 +250,7 @@ jobs:
       - name: Upload DFRoot APK
         uses: actions/upload-artifact@v7
         with:
-          name: DFRoot
+          name: DFRoot Shizuku
           path: |
             app/build/outputs/apk/release/DFRoot Shizuku-*_CN.apk
             app/build/outputs/apk/debug/DFRoot Shizuku-*_CN.apk
