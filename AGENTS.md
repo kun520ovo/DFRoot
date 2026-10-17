@@ -1,4 +1,4 @@
-# DFRoot Shizuku版开发与维护规则
+# DFRoot Shizuku 开发与维护规则
 
 本文件适用于本目录及全部子目录。**本文件所在目录就是项目根目录**，它与 `app/`、`lkm/`、`gradlew` 同级。下文路径均相对于项目根目录。
 
@@ -110,7 +110,7 @@
 
 | 项目 | 当前约定 |
 |---|---|
-| 应用名称与标题 | `DFRoot Shizuku版`；署名为 `@kun520ovo GitHub/DFRoot`。 |
+| 应用名称与标题 | `DFRoot Shizuku`；署名为 `@kun520ovo GitHub/DFRoot`。 |
 | 标题点击 | 通过系统浏览器打开 `https://github.com/kun520ovo/DFRoot`，保留“设置”入口。 |
 | 标题样式 | 沿用上游原生 ActionBar 的字号与位置，点击区域无矩形背景；不加“本次开机手动提权”副标题或无功能的三个点菜单。 |
 | 浅色主色 / 深色主色 | `#8FC79A` / `#4A7A57`；深色页面背景为黑色。 |

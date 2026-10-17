@@ -2,9 +2,9 @@
   <img src=".github/icon.png" width="96" alt="DFRoot 图标" />
 </p>
 
-# DFRoot Shizuku版
+# DFRoot Shizuku
 
-DFRoot Shizuku版是一个 Android 临时 Root 工具。它在受支持的设备上执行提权，并通过兼容 KernelSU 的管理器管理 Root 权限。Root 属于本次开机状态，设备完整重启后需要重新提权。
+DFRoot Shizuku 是一个 Android 临时 Root 工具。它在受支持的设备上执行提权，并通过兼容 KernelSU 的管理器管理 Root 权限。Root 属于本次开机状态，设备完整重启后需要重新提权。
 
 本项目基于 [diabl0w/DFRoot](https://github.com/diabl0w/DFRoot) 上游4.5版，增加 Shizuku 临时环境准备、应用列表授权处理、中文界面和全屏日志。**本版的手动提权需要先启动并授权 Shizuku。** 上游同步范围与详细改动见[修改说明](修改说明.md)。
 
@@ -16,7 +16,7 @@ Root 是 Android 的系统管理员权限。下面三个应用各有职责，需
 
 | 应用 | 作用 |
 |---|---|
-| DFRoot Shizuku版 | 执行提权、检查运行条件，并显示结果与日志。 |
+| DFRoot Shizuku | 执行提权、检查运行条件，并显示结果与日志。 |
 | Shizuku | 让本应用在提权前有权限准备临时系统设置。它显示“已运行”不等于 DFRoot 已取得 Root。 |
 | SU 管理器 | 提供 DFRoot 需要的管理器程序，并在提权成功后管理其他应用的 Root 授权。 |
 
@@ -29,7 +29,7 @@ Root 是 Android 的系统管理员权限。下面三个应用各有职责，需
 | 本项目版本 | `5.1-cn`，应用包名为 `df.root.shizuku.cn`。 |
 | 设备 | ARM64，Android 12L / API 32 或更高版本。 |
 | 内核 | 能通过下方的 KMI 检查；固件和安全补丁也会影响实际结果。 |
-| Shizuku | 13 或以上版本，服务已启动，并允许 DFRoot Shizuku版使用。 |
+| Shizuku | 13 或以上版本，服务已启动，并允许 DFRoot Shizuku 使用。 |
 | SU 管理器 | 兼容 KernelSU，且能被本应用识别。其安装内容需要提供 `libksud.so`。 |
 
 - 本项目安装包：查看 [Releases](https://github.com/kun520ovo/DFRoot/releases)。
@@ -51,9 +51,9 @@ KMI 用来标识内核所属的 Android 分支与内核主次版本。当前内�
 
 ## 使用步骤
 
-1. **安装应用。** 安装本项目的已签名 APK、Shizuku 和一个兼容的 SU 管理器。当前测试按卸载旧版 DFRoot Shizuku版后重新安装处理；先完成旧版正在进行的提权或恢复任务。
+1. **安装应用。** 安装本项目的已签名 APK、Shizuku 和一个兼容的 SU 管理器。当前测试按卸载旧版 DFRoot Shizuku 后重新安装处理；先完成旧版正在进行的提权或恢复任务。
 2. **启动 Shizuku。** 打开 Shizuku，按其指南启动服务，确认它显示正在运行。
-3. **允许读取应用列表。** 打开 DFRoot Shizuku版，完成系统授权。主按钮显示“请先允许读取应用列表”时，点击它请求授权；如果变为“打开权限设置”，点击进入本应用的系统设置，允许读取应用列表后返回。
+3. **允许读取应用列表。** 打开 DFRoot Shizuku，完成系统授权。主按钮显示“请先允许读取应用列表”时，点击它请求授权；如果变为“打开权限设置”，点击进入本应用的系统设置，允许读取应用列表后返回。
 4. **选择 SU 管理器。** 只有一个可用管理器时会自动选中；有多个时选择你要使用的那个。如果未找到管理器，按下方常见问题排查，再点击“重新读取应用列表”。
 5. **核对内核。** 确认“匹配 KMI”显示受支持的条目。显示“不支持”时不能启动提权。
 6. **完成 Shizuku 授权。** 点击“检查 Shizuku”，按提示允许本应用使用 Shizuku，等待服务已运行、已授权且没有待恢复设置。
