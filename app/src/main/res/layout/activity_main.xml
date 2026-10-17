@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -202,12 +203,14 @@
                 android:text="@string/log_view_fullscreen" />
         </LinearLayout>
 
+        <!-- The page and this log pane intentionally scroll independently. -->
         <ScrollView
             android:id="@+id/outputScroll"
             android:layout_width="match_parent"
             android:layout_height="180dp"
             android:fillViewport="true"
-            android:nestedScrollingEnabled="true">
+            android:nestedScrollingEnabled="true"
+            tools:ignore="NestedScrolling">
 
             <TextView
                 android:id="@+id/outputView"

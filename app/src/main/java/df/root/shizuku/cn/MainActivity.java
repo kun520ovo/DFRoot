@@ -1,5 +1,6 @@
 package df.root.shizuku.cn;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActionBar;
 import android.app.Dialog;
@@ -144,6 +145,8 @@ public class MainActivity extends Activity implements IReporter {
             // Use the same native title/subtitle layout and typography as upstream.
             actionBar.setDisplayShowTitleEnabled(true);
             actionBar.setDisplayShowCustomEnabled(false);
+            // The native title ID has no public SDK constant; keep the fallback for ROM differences.
+            @SuppressLint("DiscouragedApi")
             int titleId = getResources().getIdentifier("action_bar_title", "id", "android");
             View title = titleId == 0 ? null : findViewById(titleId);
             View header;

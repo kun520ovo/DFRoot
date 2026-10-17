@@ -1,5 +1,6 @@
 package df.root.shizuku.cn;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -35,6 +36,9 @@ final class ShizukuCompat {
     private static final int REQUEST_PERMISSION = 0xdf02;
     // Bump when the UserService implementation or its IPC protocol changes.
     private static final int SERVICE_VERSION = 1;
+
+    // Process singleton: the stored context comes from getApplicationContext().
+    @SuppressLint("StaticFieldLeak")
     private static ShizukuCompat instance;
 
     private enum State {

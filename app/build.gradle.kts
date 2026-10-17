@@ -71,6 +71,8 @@ android {
 
     lint {
         checkReleaseBuilds = true
+        // Native code and the bundled kernel modules support ARM64 only.
+        disable += "ChromeOsAbiSupport"
     }
 
     externalNativeBuild {
