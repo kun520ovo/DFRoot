@@ -7,6 +7,17 @@ on:
   pull_request:
     branches: [master, main]
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: '构建成功后发布到 Releases'
+        type: boolean
+        required: false
+        default: false
+      release_tag:
+        description: '发布标签（如 v5.1-cn；留空使用当前版本）'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -15,6 +26,7 @@ jobs:
   build-lkms:
     name: LKMs / ${{ matrix.kmi }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         kmi:
@@ -59,12 +71,60 @@ jobs:
   build-dfroot:
     needs: build-lkms
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
+    # Manual runs can derive the tag only after checkout, so all releases share a group.
+    concurrency:
+      group: >-
+        ${{ github.workflow }}-${{ ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_release)) && 'release' || github.run_id }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Prepare GitHub Release
+        id: release
+        if: >-
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+        shell: bash
+        env:
+          REQUESTED_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="$GITHUB_REF_NAME"
+            if [[ -n "$REQUESTED_RELEASE_TAG" && "$REQUESTED_RELEASE_TAG" != "$tag" ]]; then
+              echo "::error::The release tag must match the tag selected for this run."
+              exit 1
+            fi
+          else
+            tag="$REQUESTED_RELEASE_TAG"
+            if [[ -z "$tag" ]]; then
+              version="$(sed -n 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts)"
+              if [[ -z "$version" ]]; then
+                echo "::error::Cannot determine versionName; specify a release tag."
+                exit 1
+              fi
+              tag="v$version"
+            fi
+          fi
+          if [[ "$tag" != v* ]] || ! git check-ref-format "refs/tags/$tag"; then
+            echo "::error::Release tag must start with v and be a valid Git tag."
+            exit 1
+          fi
+          commit="$(git rev-parse HEAD)"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            tagged_commit="$(git rev-parse "refs/tags/$tag^{commit}")"
+            if [[ "$tagged_commit" != "$commit" ]]; then
+              echo "::error::This tag already points to another commit. Use a new release tag."
+              exit 1
+            fi
+          fi
+          printf 'tag=%s\ncommit=%s\n' "$tag" "$commit" >> "$GITHUB_OUTPUT"
 
       - name: Create signing.properties
         if: github.event_name != 'pull_request'
@@ -124,13 +184,22 @@ jobs:
         if: github.event_name != 'pull_request'
         run: bash ./gradlew :app:assembleRelease :app:lintRelease --console=plain
 
+      - name: Upload Lint reports
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lint-Reports
+          path: app/build/reports/lint-results-*
+          if-no-files-found: ignore
+
       - name: Check Release APK
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
           tools="$ANDROID_HOME/build-tools/37.0.0"
           for apk in app/build/outputs/apk/release/"DFRoot Shizuku-"*_CN.apk; do
-            "$tools/aapt2" dump badging "$apk"
+            "$tools/aapt2" dump badging "$apk" | tee "$RUNNER_TEMP/apk-badging.txt"
             # This verifies legacy signature layers; the APK minSdk remains 32.
             "$tools/apksigner" verify --verbose --min-sdk-version 23 "$apk" | tee "$RUNNER_TEMP/signatures.txt"
             for scheme in v1 v2 v3; do
@@ -138,8 +207,33 @@ jobs:
             done
             "$tools/zipalign" -c -P 16 4 "$apk"
             python3 - "$apk" <<'PY'
-          import struct, sys, zipfile
+          import os, re, struct, sys, zipfile
           from pathlib import Path
+          config = Path("app/build.gradle.kts").read_text(encoding="utf-8")
+          badging = Path(os.environ["RUNNER_TEMP"], "apk-badging.txt").read_text(encoding="utf-8")
+          for key, pattern in (
+              ("applicationId", r"^package: name='([^']*)'"),
+              ("versionCode", r"^package:.*\bversionCode='([^']*)'"),
+              ("versionName", r"^package:.*\bversionName='([^']*)'"),
+              ("minSdk", r"^(?:minSdkVersion|sdkVersion):'([^']*)'"),
+              ("targetSdk", r"^targetSdkVersion:'([^']*)'"),
+              ("compileSdk", r"^package:.*\bcompileSdkVersion='([^']*)'"),
+          ):
+              values = re.findall(rf'^\s*{key}\s*=\s*("[^"\r\n]+"|\d+)\s*(?://[^\r\n]*)?$', config, re.M)
+              if len(values) != 1:
+                  raise SystemExit(f"::error::Cannot determine {key} from app/build.gradle.kts")
+              expected = values[0].strip('"')
+              match = re.search(pattern, badging, re.M)
+              actual = match.group(1) if match else "<missing>"
+              if actual != expected:
+                  raise SystemExit(f"::error::APK {key}: expected {expected}, got {actual}")
+          native = re.search(r"^native-code:([^\r\n]*)", badging, re.M)
+          abis = re.findall(r"'([^']*)'", native.group(1)) if native else []
+          if abis != ["arm64-v8a"]:
+              raise SystemExit(f"::error::APK must contain only arm64-v8a native code, got {abis}")
+          if re.search(r"^application-debuggable\b", badging, re.M):
+              raise SystemExit("::error::Release APK must not be debuggable")
+          print("APK metadata verified")
           with zipfile.ZipFile(sys.argv[1]) as apk:
               files = [(name, apk.read(name)) for name in ("lib/arm64-v8a/libdfroot.so", "lib/arm64-v8a/libbootstrap.so")]
           files.append(("splicehelper", Path("app/src/main/jni/splicehelper").read_bytes()))
@@ -162,11 +256,35 @@ jobs:
             app/build/outputs/apk/debug/DFRoot Shizuku-*_CN.apk
           if-no-files-found: error
 
+      - name: Recheck GitHub Release tag
+        if: steps.release.outputs.tag != ''
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          refs="$(git -c http.extraheader="AUTHORIZATION: basic $auth" ls-remote --tags origin \
+            "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}")"
+          remote_commit="$(printf '%s\n' "$refs" | awk '
+            /\^\{\}$/ { peeled = $1; next }
+            NF { direct = $1 }
+            END { print (peeled != "" ? peeled : direct) }')"
+          if [[ -n "$remote_commit" && "$remote_commit" != "$RELEASE_COMMIT" ]]; then
+            echo "::error::The remote release tag points to another commit. Use a new release tag."
+            exit 1
+          fi
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        if: steps.release.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ steps.release.outputs.commit }}
           files: app/build/outputs/apk/release/DFRoot Shizuku-*_CN.apk
+          fail_on_unmatched_files: true
 
       - name: Remove temporary signing files
         if: always() && github.event_name != 'pull_request'
